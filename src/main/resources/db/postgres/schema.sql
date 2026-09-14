@@ -81,3 +81,12 @@ CREATE TABLE IF NOT EXISTS appointments (
 );
 CREATE INDEX IF NOT EXISTS idx_appointments_pet_time ON appointments(pet_id, status, start_time, end_time);
 CREATE INDEX IF NOT EXISTS idx_appointments_vet_time ON appointments(vet_id, status, start_time, end_time);
+
+CREATE TABLE IF NOT EXISTS user_profiles (
+  username VARCHAR(20) PRIMARY KEY,
+  owner_id INTEGER UNIQUE,
+  vet_id INTEGER UNIQUE,
+  CONSTRAINT fk_profile_user FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE,
+  CONSTRAINT fk_profile_owner FOREIGN KEY (owner_id) REFERENCES owners(id) ON DELETE SET NULL,
+  CONSTRAINT fk_profile_vet FOREIGN KEY (vet_id) REFERENCES vets(id) ON DELETE SET NULL
+);

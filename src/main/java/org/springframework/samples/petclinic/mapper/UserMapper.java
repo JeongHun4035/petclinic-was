@@ -26,6 +26,7 @@ public interface UserMapper {
     User toUser(UserDto userDto);
 
     @Mapping(target = "authCode", expression = "java(toAuthCode(user.getRoles()))")
+    @Mapping(target = "password", ignore = true)
     UserDto toUserDto(User user);
 
     default String toAuthCode(Collection<Role> roles) {

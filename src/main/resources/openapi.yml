@@ -8,7 +8,11 @@ info:
   version: '1.0'
 servers:
   - url: http://localhost:9966/petclinic/api
+security:
+  - bearerAuth: []
 tags:
+  - name: auth
+    description: Owner signup, password login and bearer token authentication.
   - name: appointments
     description: Scheduling consultations for pets and vets.
   - name: oops
@@ -32,6 +36,69 @@ tags:
   - name: specialties
     description: Endpoints related to vet specialties.
 paths:
+  /auth/signup:
+    post:
+      tags: [auth]
+      operationId: signup
+      security: []
+      summary: Register an owner and a new owner profile
+      description: Only OWNER signup is public. Vets and admins must be provisioned by an admin through POST /users.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+      responses:
+        '201':
+          description: Owner account created. Password is never returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUser'
+        '400':
+          $ref: '#/components/responses/AppointmentInvalidRequest'
+        '403':
+          description: Public staff registration is forbidden.
+        '409':
+          description: Username already exists.
+  /auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      security: []
+      summary: Login and issue a JWT access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Bearer token and current account profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/AppointmentInvalidRequest'
+        '401':
+          description: Invalid credentials or disabled account.
+  /auth/me:
+    get:
+      tags: [auth]
+      operationId: getCurrentUser
+      summary: Get the authenticated user's current profile and authority code
+      responses:
+        '200':
+          description: Current account profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUser'
+        '401':
+          description: Authentication required.
   /appointments:
     post:
       tags: [appointments]
@@ -2017,6 +2084,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetail'
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   parameters:
     AppointmentId:
       name: appointmentId
@@ -2049,6 +2121,93 @@ components:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
   schemas:
+    SignupRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          pattern: '^[A-Za-z0-9._-]{3,20}$'
+          minLength: 3
+          maxLength: 20
+          example: owner.one
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+          writeOnly: true
+          description: At least 8 characters; at most 72 UTF-8 bytes.
+        authCode:
+          type: string
+          description: Only OWNER is permitted. Defaults to OWNER when omitted.
+          example: OWNER
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 30
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 30
+        address:
+          type: string
+          minLength: 1
+          maxLength: 255
+        city:
+          type: string
+          minLength: 1
+          maxLength: 80
+        telephone:
+          type: string
+          pattern: '^[0-9]{10}$'
+          description: Existing owner model requires exactly 10 digits.
+      required: [username, password, firstName, lastName, address, city, telephone]
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 20
+          example: admin
+        password:
+          type: string
+          minLength: 1
+          maxLength: 72
+          writeOnly: true
+      required: [username, password]
+    AuthUser:
+      type: object
+      properties:
+        username:
+          type: string
+        authCode:
+          type: string
+          description: OWNER, VETS or ADMIN.
+        ownerId:
+          type: integer
+          format: int32
+          nullable: true
+        vetId:
+          type: integer
+          format: int32
+          nullable: true
+      required: [username, authCode]
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+        expiresIn:
+          type: integer
+          format: int32
+          description: Access token lifetime in seconds.
+          example: 3600
+        user:
+          $ref: '#/components/schemas/AuthUser'
+      required: [accessToken, tokenType, expiresIn, user]
     AppointmentFields:
       type: object
       description: Editable appointment details. Times must include a timezone offset. The start must be in the future and the end must follow the start.
@@ -2550,6 +2709,16 @@ components:
       description: An user.
       type: object
       properties:
+        ownerId:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Existing owner to link when an administrator creates an OWNER account.
+        vetId:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Existing vet to link when an administrator creates a VET account.
         authCode:
           description: Automatically populated from roles in user creation responses. No authCode input is needed. Priority is ADMIN, VETS, then OWNER. Null when no recognized role is assigned.
           type: string
@@ -2560,16 +2729,19 @@ components:
           title: username
           description: The username
           type: string
-          maxLength: 80
-          minLength: 1
+          maxLength: 20
+          minLength: 3
+          pattern: '^[A-Za-z0-9._-]{3,20}$'
           example: john.doe
         password:
           title: Password
           description: The password
           type: string
-          maxLength: 80
-          minLength: 1
-          example: 1234abc
+          writeOnly: true
+          x-field-extra-annotation: "@com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)"
+          maxLength: 72
+          minLength: 8
+          example: PassWord123!
         enabled:
           title: enabled
           description: Indicates if the user is enabled
@@ -2579,10 +2751,13 @@ components:
           title: Roles
           description: The roles of an user
           type: array
+          minItems: 1
           items:
             $ref: '#/components/schemas/Role'
       required:
         - username
+        - password
+        - roles
     Role:
       title: Role
       description: A role.

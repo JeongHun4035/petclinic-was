@@ -241,7 +241,9 @@ class AppointmentRestControllerTests {
             database = new EmbeddedDatabaseBuilder().generateUniqueName(true)
                 .setType(platform.equals("h2") ? EmbeddedDatabaseType.H2 : EmbeddedDatabaseType.HSQL)
                 .addScript("db/" + platform + "/schema.sql").addScript("db/" + platform + "/data.sql").build();
-            var factory = new ProxyFactory(new AppointmentService(new JdbcAppointmentRepository(database)));
+            var factory = new ProxyFactory(new AppointmentService(new JdbcAppointmentRepository(database),
+                new org.springframework.samples.petclinic.security.AccessPolicy(
+                    new org.springframework.samples.petclinic.repository.jdbc.JdbcAccountRepository(database), false)));
             factory.setProxyTargetClass(true);
             factory.addAdvice(new TransactionInterceptor(new DataSourceTransactionManager(database),
                 new AnnotationTransactionAttributeSource()));

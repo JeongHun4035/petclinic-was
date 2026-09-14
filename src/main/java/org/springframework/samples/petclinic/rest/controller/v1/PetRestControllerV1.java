@@ -23,6 +23,7 @@ import org.springframework.samples.petclinic.model.Pet;
 import org.springframework.samples.petclinic.rest.api.PetsApi;
 import org.springframework.samples.petclinic.rest.dto.PetDto;
 import org.springframework.samples.petclinic.service.ClinicService;
+import org.springframework.samples.petclinic.security.AccessPolicy;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -43,13 +44,15 @@ public class PetRestControllerV1 implements PetsApi {
     private final ClinicService clinicService;
 
     private final PetMapper petMapper;
+    private final AccessPolicy access;
 
-    public PetRestControllerV1(ClinicService clinicService, PetMapper petMapper) {
+    public PetRestControllerV1(ClinicService clinicService, PetMapper petMapper, AccessPolicy access) {
         this.clinicService = clinicService;
         this.petMapper = petMapper;
+        this.access = access;
     }
 
-    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    @PreAuthorize("@access.readPet(#petId)")
     @Override
     public ResponseEntity<PetDto> getPet(Integer petId) {
         PetDto pet = petMapper.toPetDto(this.clinicService.findPetById(petId));
@@ -59,10 +62,10 @@ public class PetRestControllerV1 implements PetsApi {
         return new ResponseEntity<>(pet, HttpStatus.OK);
     }
 
-    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    @PreAuthorize("@access.clinicalUser()")
     @Override
     public ResponseEntity<List<PetDto>> listPets() {
-        List<PetDto> pets = new ArrayList<>(petMapper.toPetsDto(this.clinicService.findAllPets()));
+        List<PetDto> pets = new ArrayList<>(petMapper.toPetsDto(access.visiblePets(this.clinicService.findAllPets())));
         if (pets.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
@@ -70,7 +73,7 @@ public class PetRestControllerV1 implements PetsApi {
     }
 
 
-    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    @PreAuthorize("@access.writePet(#petId)")
     @Override
     public ResponseEntity<PetDto> updatePet(Integer petId, PetDto petDto) {
         Pet currentPet = this.clinicService.findPetById(petId);
@@ -84,7 +87,7 @@ public class PetRestControllerV1 implements PetsApi {
         return new ResponseEntity<>(petMapper.toPetDto(currentPet), HttpStatus.NO_CONTENT);
     }
 
-    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    @PreAuthorize("@access.writePet(#petId)")
     @Override
     public ResponseEntity<PetDto> deletePet(Integer petId) {
         Pet pet = this.clinicService.findPetById(petId);

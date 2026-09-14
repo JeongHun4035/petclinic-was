@@ -220,16 +220,20 @@ mvn clean install
 ```
 
 ## Security configuration
-In its default configuration, Petclinic doesn't have authentication and authorization enabled.
+JWT authentication and role authorization are enabled by default.
 
-### Basic Authentication
-In order to use the basic authentication functionality, turn in on from the `application.properties` file
+### JWT Authentication
+Authentication is configured in `application.properties`:
 ```properties
 petclinic.security.enable=true
 ```
-This will secure all APIs and in order to access them, basic authentication is required.
+Use `POST /api/auth/login` to obtain an access token, then send `Authorization: Bearer <accessToken>`.
+Public owner signup is available at `POST /api/auth/signup`. Staff accounts require an administrator.
+See the [authentication documentation](docs/authentication.md) for signup payloads, account links and permissions.
 Apart from authentication, APIs also require authorization. This is done via roles that a user can have.
-The existing roles are listed below with the corresponding permissions 
+Ordinary roles are `OWNER`, `VET` (external code `VETS`) and `ADMIN`.
+Owners access their own data and vets access assigned appointments and related clinical records.
+The following legacy department management roles are retained for compatibility:
 
 * `OWNER_ADMIN` -> `OwnerController`, `PetController`, `PetTypeController` (`getAllPetTypes` and `getPetType`), `VisitController`
 * `VET_ADMIN`   -> `PetTypeController`, `SpecialityController`, `VetController`
@@ -340,3 +344,7 @@ For pull requests, editor preferences are available in the [editor config](https
 ## 예약 서비스
 
 예약 생성·조회·변경·취소와 DB 관계는 [예약 API 문서](docs/appointments.md)를 참고하세요.
+
+## 회원가입·로그인
+
+JWT 로그인·보호자 회원가입과 권한별 API 사용법은 [인증 문서](docs/authentication.md)를 참고하세요.

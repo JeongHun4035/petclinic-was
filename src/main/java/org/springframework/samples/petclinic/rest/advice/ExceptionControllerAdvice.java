@@ -154,7 +154,8 @@ public class ExceptionControllerAdvice {
             errors.addAllErrors(bindingResult);
             List<ValidationMessageDto> schemaValidationErrors = bindingResult.getFieldErrors().stream()
                 .map(fieldError -> {
-                    String rejectedValue = Objects.toString(fieldError.getRejectedValue(), "null");
+                    String rejectedValue = fieldError.getField().toLowerCase(java.util.Locale.ROOT).contains("password")
+                        ? "[REDACTED]" : Objects.toString(fieldError.getRejectedValue(), "null");
                     String defaultMessage = Objects.toString(fieldError.getDefaultMessage(), "Validation failed");
                     String message = "Field '%s' %s (rejected value: %s)".formatted(
                         fieldError.getField(),

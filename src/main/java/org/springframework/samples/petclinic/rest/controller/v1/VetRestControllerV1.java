@@ -53,7 +53,7 @@ public class VetRestControllerV1 implements VetsApi {
         this.specialtyMapper = specialtyMapper;
     }
 
-    @PreAuthorize("hasRole(@roles.VET_ADMIN)")
+    @PreAuthorize("@access.clinicalUser()")
     @Override
     public ResponseEntity<List<VetDto>> listVets() {
         List<VetDto> vets = new ArrayList<>(vetMapper.toVetDtos(this.clinicService.findAllVets()));
@@ -63,7 +63,7 @@ public class VetRestControllerV1 implements VetsApi {
         return new ResponseEntity<>(vets, HttpStatus.OK);
     }
 
-    @PreAuthorize("hasRole(@roles.VET_ADMIN)")
+    @PreAuthorize("@access.clinicalUser()")
     @Override
     public ResponseEntity<VetDto> getVet(Integer vetId)  {
         Vet vet = this.clinicService.findVetById(vetId);
@@ -73,7 +73,7 @@ public class VetRestControllerV1 implements VetsApi {
         return new ResponseEntity<>(vetMapper.toVetDto(vet), HttpStatus.OK);
     }
 
-    @PreAuthorize("hasRole(@roles.VET_ADMIN)")
+    @PreAuthorize("@access.managesVets()")
     @Override
     public ResponseEntity<VetDto> addVet(VetDto vetDto) {
         HttpHeaders headers = new HttpHeaders();
@@ -87,7 +87,7 @@ public class VetRestControllerV1 implements VetsApi {
         return new ResponseEntity<>(vetMapper.toVetDto(vet), headers, HttpStatus.CREATED);
     }
 
-    @PreAuthorize("hasRole(@roles.VET_ADMIN)")
+    @PreAuthorize("@access.managesVets()")
     @Override
     public ResponseEntity<VetDto> updateVet(Integer vetId,VetDto vetDto)  {
         Vet currentVet = this.clinicService.findVetById(vetId);
@@ -108,7 +108,7 @@ public class VetRestControllerV1 implements VetsApi {
         return new ResponseEntity<>(vetMapper.toVetDto(currentVet), HttpStatus.NO_CONTENT);
     }
 
-    @PreAuthorize("hasRole(@roles.VET_ADMIN)")
+    @PreAuthorize("@access.managesVets()")
     @Transactional
     @Override
     public ResponseEntity<VetDto> deleteVet(Integer vetId) {

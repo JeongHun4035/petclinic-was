@@ -39,14 +39,18 @@ public class SwaggerConfig {
     @Bean
     OpenAPI customOpenAPI() {
         return new OpenAPI()
-            .components(new Components())
+            .components(new Components().addSecuritySchemes("bearerAuth",
+                new io.swagger.v3.oas.models.security.SecurityScheme()
+                    .type(io.swagger.v3.oas.models.security.SecurityScheme.Type.HTTP).scheme("bearer").bearerFormat("JWT")))
+            .addSecurityItem(new io.swagger.v3.oas.models.security.SecurityRequirement().addList("bearerAuth"))
             .info(new Info()
                 .title("REST Petclinic backend API documentation")
                 .version("1.0")
                 .termsOfService("https://github.com/spring-petclinic/spring-petclinic-rest/blob/master/terms.txt")
                 .description(
                     "This is the REST API documentation of the Spring Petclinic backend. " +
-                        "If authentication is enabled, use admin/admin when calling the APIs")
+                        "Login at /api/auth/login and use the returned accessToken with Authorize. " +
+                        "The local sample admin account uses admin/admin.")
                 .license(swaggerLicense())
                 .contact(swaggerContact()));
     }

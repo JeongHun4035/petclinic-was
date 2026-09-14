@@ -7,6 +7,7 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.samples.petclinic.model.Appointment;
 import org.springframework.samples.petclinic.repository.AppointmentRepository;
+import org.springframework.samples.petclinic.security.AccessPolicy;
 import org.springframework.samples.petclinic.rest.dto.AppointmentDto;
 import org.springframework.samples.petclinic.rest.dto.AppointmentFieldsDto;
 import org.springframework.stereotype.Service;
@@ -18,14 +19,18 @@ import org.springframework.web.server.ResponseStatusException;
 @Transactional(isolation = Isolation.READ_COMMITTED)
 public class AppointmentService {
     private final AppointmentRepository repository;
+    private final AccessPolicy access;
 
-    public AppointmentService(AppointmentRepository repository) {
+    public AppointmentService(AppointmentRepository repository, AccessPolicy access) {
         this.repository = repository;
+        this.access = access;
     }
 
     @Transactional(readOnly = true)
     public AppointmentDto get(int id) {
-        return toDto(required(id, false));
+        Appointment appointment = required(id, false);
+        access.requireAppointmentRead(appointment);
+        return toDto(appointment);
     }
 
     @Transactional(readOnly = true)
@@ -43,12 +48,29 @@ public class AppointmentService {
         if (from != null && to != null && !from.isBefore(to)) {
             throw error(HttpStatus.BAD_REQUEST, "from must be earlier than to");
         }
+        if (!access.clinicalStaff()) {
+            var account = access.currentAccount();
+            if (access.hasRole("ROLE_OWNER") && account.ownerId() != null) {
+                if (ownerId != null && !ownerId.equals(account.ownerId())) {
+                    throw error(HttpStatus.FORBIDDEN, "Cannot list another owner's appointments");
+                }
+                ownerId = account.ownerId();
+            } else if (access.hasRole("ROLE_VET") && account.vetId() != null) {
+                if (vetId != null && !vetId.equals(account.vetId())) {
+                    throw error(HttpStatus.FORBIDDEN, "Cannot list another vet's appointments");
+                }
+                vetId = account.vetId();
+            } else {
+                throw error(HttpStatus.FORBIDDEN, "Account has no linked clinical profile");
+            }
+        }
         return repository.findAll(petId, vetId, ownerId, status, from, to, pageLimit, pageOffset)
             .stream().map(this::toDto).toList();
     }
 
     public AppointmentDto create(AppointmentFieldsDto request) {
         Appointment appointment = prepare(null, request);
+        access.requireAppointmentWrite(appointment.petId());
         repository.lockPetAndVet(appointment.petId(), appointment.vetId());
         checkAvailability(appointment);
         return toDto(required(repository.insert(appointment), false));
@@ -57,6 +79,8 @@ public class AppointmentService {
     public AppointmentDto update(int id, AppointmentFieldsDto request) {
         Appointment appointment = prepare(id, request);
         Appointment existing = required(id, true);
+        access.requireAppointmentRead(existing);
+        access.requireAppointmentWrite(appointment.petId());
         if (!"SCHEDULED".equals(existing.status()) || !existing.startTime().isAfter(OffsetDateTime.now())) {
             throw error(HttpStatus.CONFLICT, "Only upcoming scheduled appointments can be changed");
         }
@@ -68,6 +92,7 @@ public class AppointmentService {
 
     public AppointmentDto cancel(int id) {
         Appointment existing = required(id, true);
+        access.requireAppointmentRead(existing);
         if ("CANCELLED".equals(existing.status())) {
             return toDto(existing);
         }

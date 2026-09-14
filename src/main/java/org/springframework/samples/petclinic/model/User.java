@@ -27,6 +27,18 @@ public class User {
     @Column(name = "enabled")
     private Boolean enabled;
 
+    // Account/profile links live in user_profiles so existing users tables need no destructive migration.
+    @jakarta.persistence.Transient
+    private Integer ownerId;
+
+    @jakarta.persistence.Transient
+    private Integer vetId;
+
+    public Integer getOwnerId() { return ownerId; }
+    public void setOwnerId(Integer ownerId) { this.ownerId = ownerId; }
+    public Integer getVetId() { return vetId; }
+    public void setVetId(Integer vetId) { this.vetId = vetId; }
+
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "user", fetch = FetchType.EAGER)
     private Set<Role> roles;
 

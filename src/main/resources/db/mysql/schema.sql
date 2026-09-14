@@ -86,3 +86,12 @@ CREATE TABLE IF NOT EXISTS appointments (
   CONSTRAINT chk_appointments_times CHECK (end_time > start_time),
   CONSTRAINT chk_appointments_status CHECK (status = 'SCHEDULED' OR status = 'CANCELLED')
 ) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS user_profiles (
+  username VARCHAR(20) PRIMARY KEY,
+  owner_id INT UNSIGNED UNIQUE,
+  vet_id INT UNSIGNED UNIQUE,
+  CONSTRAINT fk_profile_user FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE,
+  CONSTRAINT fk_profile_owner FOREIGN KEY (owner_id) REFERENCES owners(id) ON DELETE SET NULL,
+  CONSTRAINT fk_profile_vet FOREIGN KEY (vet_id) REFERENCES vets(id) ON DELETE SET NULL
+) ENGINE=InnoDB;

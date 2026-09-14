@@ -36,6 +36,7 @@ import org.springframework.samples.petclinic.rest.dto.PetFieldsDto;
 import org.springframework.samples.petclinic.rest.dto.VisitDto;
 import org.springframework.samples.petclinic.rest.dto.VisitFieldsDto;
 import org.springframework.samples.petclinic.service.ClinicService;
+import org.springframework.samples.petclinic.security.AccessPolicy;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -60,18 +61,20 @@ public class OwnerRestControllerV1 implements OwnersApi {
     private final PetMapper petMapper;
 
     private final VisitMapper visitMapper;
+    private final AccessPolicy access;
 
     public OwnerRestControllerV1(ClinicService clinicService,
                                  OwnerMapper ownerMapper,
                                  PetMapper petMapper,
-                                 VisitMapper visitMapper) {
+                                 VisitMapper visitMapper, AccessPolicy access) {
         this.clinicService = clinicService;
         this.ownerMapper = ownerMapper;
         this.petMapper = petMapper;
         this.visitMapper = visitMapper;
+        this.access = access;
     }
 
-    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    @PreAuthorize("@access.clinicalUser()")
     @Override
     public ResponseEntity<List<OwnerDto>> listOwners(String lastName) {
         Collection<Owner> owners;
@@ -80,23 +83,24 @@ public class OwnerRestControllerV1 implements OwnersApi {
         } else {
             owners = this.clinicService.findAllOwners();
         }
+        owners = access.visibleOwners(owners);
         if (owners.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-        return new ResponseEntity<>(ownerMapper.toOwnerDtoCollection(owners), HttpStatus.OK);
+        return new ResponseEntity<>(owners.stream().map(this::visibleOwner).toList(), HttpStatus.OK);
     }
 
-    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    @PreAuthorize("@access.readOwner(#ownerId)")
     @Override
     public ResponseEntity<OwnerDto> getOwner(Integer ownerId) {
         Owner owner = this.clinicService.findOwnerById(ownerId);
         if (owner == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-        return new ResponseEntity<>(ownerMapper.toOwnerDto(owner), HttpStatus.OK);
+        return new ResponseEntity<>(visibleOwner(owner), HttpStatus.OK);
     }
 
-    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    @PreAuthorize("@access.managesOwners()")
     @Override
     public ResponseEntity<OwnerDto> addOwner(OwnerFieldsDto ownerFieldsDto) {
         HttpHeaders headers = new HttpHeaders();
@@ -108,7 +112,7 @@ public class OwnerRestControllerV1 implements OwnersApi {
         return new ResponseEntity<>(ownerDto, headers, HttpStatus.CREATED);
     }
 
-    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    @PreAuthorize("@access.writeOwner(#ownerId)")
     @Override
     public ResponseEntity<OwnerDto> updateOwner(Integer ownerId, OwnerFieldsDto ownerFieldsDto) {
         Owner currentOwner = this.clinicService.findOwnerById(ownerId);
@@ -124,7 +128,7 @@ public class OwnerRestControllerV1 implements OwnersApi {
         return new ResponseEntity<>(ownerMapper.toOwnerDto(currentOwner), HttpStatus.NO_CONTENT);
     }
 
-    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    @PreAuthorize("@access.managesOwners()")
     @Transactional
     @Override
     public ResponseEntity<OwnerDto> deleteOwner(Integer ownerId) {
@@ -136,7 +140,7 @@ public class OwnerRestControllerV1 implements OwnersApi {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
-    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    @PreAuthorize("@access.writeOwner(#ownerId)")
     @Override
     public ResponseEntity<PetDto> addPetToOwner(Integer ownerId, PetFieldsDto petFieldsDto) {
         Owner owner = this.clinicService.findOwnerById(ownerId);
@@ -155,7 +159,7 @@ public class OwnerRestControllerV1 implements OwnersApi {
         return new ResponseEntity<>(petDto, headers, HttpStatus.CREATED);
     }
 
-    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    @PreAuthorize("@access.writeOwner(#ownerId) and @access.writePet(#petId) and @access.ownerPet(#ownerId, #petId)")
     @Override
     public ResponseEntity<Void> updateOwnersPet(Integer ownerId, Integer petId, PetFieldsDto petFieldsDto) {
         Owner currentOwner = this.clinicService.findOwnerById(ownerId);
@@ -172,7 +176,7 @@ public class OwnerRestControllerV1 implements OwnersApi {
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
-    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    @PreAuthorize("@access.writeVisitForPet(#petId) and @access.ownerPet(#ownerId, #petId)")
     @Override
     public ResponseEntity<VisitDto> addVisitToOwner(Integer ownerId, Integer petId, VisitFieldsDto visitFieldsDto) {
         HttpHeaders headers = new HttpHeaders();
@@ -188,7 +192,7 @@ public class OwnerRestControllerV1 implements OwnersApi {
     }
 
 
-    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    @PreAuthorize("@access.readPet(#petId) and @access.ownerPet(#ownerId, #petId)")
     @Override
     public ResponseEntity<PetDto> getOwnersPet(Integer ownerId, Integer petId) {
         Owner owner = this.clinicService.findOwnerById(ownerId);
@@ -199,5 +203,10 @@ public class OwnerRestControllerV1 implements OwnersApi {
             }
         }
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+    private OwnerDto visibleOwner(Owner owner) {
+        OwnerDto dto = ownerMapper.toOwnerDto(owner);
+        dto.setPets(dto.getPets().stream().filter(pet -> access.readPet(pet.getId())).toList());
+        return dto;
     }
 }

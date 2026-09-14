@@ -16,7 +16,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 @RestController
 @RequestMapping("/api")
 @CrossOrigin(exposedHeaders = "errors, content-type, location")
-@PreAuthorize("hasAnyRole(@roles.OWNER_ADMIN, @roles.VET_ADMIN, @roles.ADMIN)")
+@PreAuthorize("@access.clinicalUser()")
 public class AppointmentRestControllerV1 implements AppointmentsApi {
     private final AppointmentService service;
 
