@@ -58,3 +58,16 @@ INSERT IGNORE INTO users (username, password, enabled) VALUES
 INSERT IGNORE INTO roles (username, role) VALUES ('admin', 'ROLE_OWNER_ADMIN');
 INSERT IGNORE INTO roles (username, role) VALUES ('admin', 'ROLE_VET_ADMIN');
 INSERT IGNORE INTO roles (username, role) VALUES ('admin', 'ROLE_ADMIN');
+
+-- Sample owner and vet accounts (password: admin); reuse the existing admin account.
+INSERT IGNORE INTO users (username, password, enabled) VALUES
+('owner', '$2a$10$ymaklWBnpBKlgdMgkjWVF.GMGyvH8aDuTK.glFOaKw712LHtRRymS', TRUE),
+('vet', '$2a$10$ymaklWBnpBKlgdMgkjWVF.GMGyvH8aDuTK.glFOaKw712LHtRRymS', TRUE);
+
+INSERT IGNORE INTO roles (username, role) VALUES
+('owner', 'ROLE_OWNER'),
+('vet', 'ROLE_VET');
+
+INSERT IGNORE INTO user_profiles (username, owner_id, vet_id) VALUES
+('owner', 1, NULL),
+('vet', NULL, 1);

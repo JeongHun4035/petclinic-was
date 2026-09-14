@@ -82,7 +82,15 @@ JWT는 [Spring Security의 Nimbus 구현](https://docs.spring.io/spring-security
 리프레시 토큰은 발급하지 않으므로 만료 후 다시 로그인합니다.
 
 Swagger UI의 **Authorize**에 로그인에서 받은 토큰을 넣어 API를 실행할 수 있습니다.
-로컬 샘플 관리자 계정은 `admin` / `admin`입니다.
+로컬 초기 데이터에는 다음 샘플 계정 3개가 있습니다. 비밀번호는 모두 `admin`이며 BCrypt로 저장됩니다.
+
+| 구분 | 아이디 | 비밀번호 | 연결 데이터 |
+| --- | --- | --- | --- |
+| 보호자 | `owner` | `admin` | 보호자 ID 1 (George Franklin) |
+| 수의사 | `vet` | `admin` | 수의사 ID 1 (James Carter) |
+| 관리자 | `admin` | `admin` | 전체 관리 권한 |
+
+H2·HSQLDB·MySQL·PostgreSQL 초기 데이터에 동일하게 구성되어 있으며, 초기 데이터가 로드되도록 애플리케이션을 재시작한 뒤 로그인할 수 있습니다.
 
 ## 수의사·관리자 계정
 

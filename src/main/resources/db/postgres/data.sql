@@ -58,3 +58,11 @@ WHERE NOT EXISTS (SELECT * FROM users WHERE username='admin');
 INSERT INTO roles (username, role) SELECT 'admin', 'ROLE_OWNER_ADMIN' WHERE NOT EXISTS (SELECT * FROM roles WHERE id=1);
 INSERT INTO roles (username, role) SELECT 'admin', 'ROLE_VET_ADMIN' WHERE NOT EXISTS (SELECT * FROM roles WHERE id=2);
 INSERT INTO roles (username, role) SELECT'admin', 'ROLE_ADMIN' WHERE NOT EXISTS (SELECT * FROM roles WHERE id=3);
+
+-- Sample owner and vet accounts (password: admin); reuse the existing admin account.
+INSERT INTO users (username, password, enabled) SELECT 'owner', '$2a$10$ymaklWBnpBKlgdMgkjWVF.GMGyvH8aDuTK.glFOaKw712LHtRRymS', TRUE WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'owner');
+INSERT INTO roles (username, role) SELECT 'owner', 'ROLE_OWNER' WHERE NOT EXISTS (SELECT 1 FROM roles WHERE username = 'owner' AND role = 'ROLE_OWNER');
+INSERT INTO users (username, password, enabled) SELECT 'vet', '$2a$10$ymaklWBnpBKlgdMgkjWVF.GMGyvH8aDuTK.glFOaKw712LHtRRymS', TRUE WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'vet');
+INSERT INTO roles (username, role) SELECT 'vet', 'ROLE_VET' WHERE NOT EXISTS (SELECT 1 FROM roles WHERE username = 'vet' AND role = 'ROLE_VET');
+INSERT INTO user_profiles (username, owner_id, vet_id) SELECT 'owner', 1, NULL WHERE NOT EXISTS (SELECT 1 FROM user_profiles WHERE username = 'owner');
+INSERT INTO user_profiles (username, owner_id, vet_id) SELECT 'vet', NULL, 1 WHERE NOT EXISTS (SELECT 1 FROM user_profiles WHERE username = 'vet');
