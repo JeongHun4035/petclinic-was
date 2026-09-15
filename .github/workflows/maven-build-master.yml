@@ -34,3 +34,4 @@ jobs:
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
           -Dsonar.projectKey=petclinic-was
           -Dsonar.organization=jeonghun4035
+          -Dsonar.cpd.exclusions=src/main/resources/db/h2/schema.sql,src/main/resources/db/hsqldb/schema.sql,src/main/resources/db/mysql/schema.sql,src/main/resources/db/postgres/schema.sql
