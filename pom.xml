@@ -43,7 +43,7 @@
 
         <!-- Docker -->
         <docker.jib-maven-plugin.version>3.5.2</docker.jib-maven-plugin.version>
-        <docker.image.prefix>springcommunity</docker.image.prefix>
+        <docker.image.prefix>wjdgns4035</docker.image.prefix>
 
         <!-- SonarQube configuration -->
         <sonar.organization>spring-petclinic-rest</sonar.organization>
