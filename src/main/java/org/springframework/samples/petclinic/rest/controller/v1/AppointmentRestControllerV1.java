@@ -51,4 +51,9 @@ public class AppointmentRestControllerV1 implements AppointmentsApi {
     public ResponseEntity<AppointmentDto> cancelAppointment(Integer appointmentId) {
         return ResponseEntity.ok(service.cancel(appointmentId));
     }
+
+    @Override
+    public ResponseEntity<AppointmentDto> confirmAppointment(Integer appointmentId) {
+        return ResponseEntity.ok(service.confirm(appointmentId));
+    }
 }

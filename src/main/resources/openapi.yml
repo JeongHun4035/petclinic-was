@@ -104,7 +104,7 @@ paths:
       tags: [appointments]
       operationId: addAppointment
       summary: Create a future appointment
-      description: Rejects overlapping scheduled appointments for either the pet or vet. Offset-aware times are stored and returned in UTC.
+      description: Creates an appointment in PENDING status. Rejects overlapping pending or confirmed appointments for either the pet or vet. Offset-aware times are stored and returned in UTC.
       requestBody:
         required: true
         content:
@@ -147,7 +147,7 @@ paths:
           schema: {type: integer, format: int32, minimum: 1}
         - name: status
           in: query
-          description: SCHEDULED or CANCELLED.
+          description: PENDING (확인중), CONFIRMED (확정), or CANCELLED (취소).
           schema: {type: string}
         - name: from
           in: query
@@ -214,6 +214,23 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/AppointmentResult'
+        '404':
+          $ref: '#/components/responses/AppointmentNotFound'
+        '409':
+          $ref: '#/components/responses/AppointmentConflict'
+  /appointments/{appointmentId}/confirm:
+    parameters:
+      - $ref: '#/components/parameters/AppointmentId'
+    post:
+      tags: [appointments]
+      operationId: confirmAppointment
+      summary: Confirm a pending appointment
+      description: Only the vet assigned to the appointment can confirm it. Repeated confirmation returns the confirmed appointment.
+      responses:
+        '200':
+          $ref: '#/components/responses/AppointmentResult'
+        '403':
+          description: The authenticated account is not the assigned vet.
         '404':
           $ref: '#/components/responses/AppointmentNotFound'
         '409':
@@ -548,6 +565,43 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetail'
   /owners/{ownerId}/pets:
+    get:
+      tags:
+        - owners
+      operationId: listOwnersPets
+      summary: List an owner's pets
+      description: Returns the pets belonging to the owner. An owner can only access their own pets.
+      parameters:
+        - name: ownerId
+          in: path
+          description: The ID of the pet owner.
+          required: true
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            example: 1
+      responses:
+        200:
+          description: The owner's pets, or an empty list when the owner has no pets.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pet'
+        403:
+          description: The authenticated account cannot access this owner.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        404:
+          description: Owner not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
     post:
       tags:
         - owners
@@ -2252,9 +2306,9 @@ components:
               readOnly: true
             status:
               type: string
-              description: SCHEDULED or CANCELLED. Status is managed by the server.
+              description: PENDING (확인중), CONFIRMED (확정), or CANCELLED (취소). Status is managed by the server.
               readOnly: true
-              example: SCHEDULED
+              example: PENDING
           required: [id, ownerId, status]
     ProblemDetail:
       title: Problem Detail

@@ -85,7 +85,7 @@ public class JdbcAppointmentRepository implements AppointmentRepository {
             .addValue("end", utcTime(end), java.sql.Types.TIMESTAMP);
         Integer count = jdbc.queryForObject("""
             SELECT COUNT(*) FROM appointments
-            WHERE status = 'SCHEDULED' AND id <> :excludedId
+            WHERE status IN ('PENDING', 'CONFIRMED') AND id <> :excludedId
               AND (pet_id = :petId OR vet_id = :vetId)
               AND start_time < :end AND end_time > :start
             """, parameters, Integer.class);
@@ -109,6 +109,11 @@ public class JdbcAppointmentRepository implements AppointmentRepository {
     @Override
     public void cancel(int id) {
         jdbc.update("UPDATE appointments SET status = 'CANCELLED' WHERE id = :id", new MapSqlParameterSource("id", id));
+    }
+
+    @Override
+    public void confirm(int id) {
+        jdbc.update("UPDATE appointments SET status = 'CONFIRMED' WHERE id = :id", new MapSqlParameterSource("id", id));
     }
 
     private MapSqlParameterSource parameters(Appointment appointment) {

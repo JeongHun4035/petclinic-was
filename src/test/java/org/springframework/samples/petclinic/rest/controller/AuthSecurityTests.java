@@ -190,6 +190,10 @@ class AuthSecurityTests {
         int secondPet = pet(second);
         mvc.perform(get("/api/owners/{id}", second.ownerId()).header("Authorization", bearer(first.token())))
             .andExpect(status().isForbidden());
+        mvc.perform(get("/api/owners/{id}/pets", second.ownerId()).header("Authorization", bearer(first.token())))
+            .andExpect(status().isForbidden());
+        mvc.perform(get("/api/owners/{id}/pets", first.ownerId()).header("Authorization", bearer(first.token())))
+            .andExpect(status().isOk());
         mvc.perform(get("/api/pets/{id}", secondPet).header("Authorization", bearer(first.token())))
             .andExpect(status().isForbidden());
         mvc.perform(get("/api/owners/{owner}/pets/{pet}", first.ownerId(), secondPet).header("Authorization", bearer(first.token())))
@@ -222,6 +226,7 @@ class AuthSecurityTests {
         for (String token : List.of(first.token(), vetToken)) {
             mvc.perform(get("/api/appointments/{id}", secondBooking).header("Authorization", bearer(token))).andExpect(status().isForbidden());
             mvc.perform(post("/api/appointments/{id}/cancel", secondBooking).header("Authorization", bearer(token))).andExpect(status().isForbidden());
+            mvc.perform(post("/api/appointments/{id}/confirm", secondBooking).header("Authorization", bearer(token))).andExpect(status().isForbidden());
             mvc.perform(get("/api/appointments").header("Authorization", bearer(token)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1));
         }
@@ -237,6 +242,10 @@ class AuthSecurityTests {
         mvc.perform(get("/api/pets/{id}", siblingPet).header("Authorization", bearer(vetToken))).andExpect(status().isForbidden());
         mvc.perform(get("/api/owners/{id}", first.ownerId()).header("Authorization", bearer(vetToken)))
             .andExpect(status().isOk()).andExpect(jsonPath("$.pets.length()").value(1));
+        mvc.perform(post("/api/appointments/{id}/confirm", firstBooking).header("Authorization", bearer(first.token())))
+            .andExpect(status().isForbidden());
+        mvc.perform(post("/api/appointments/{id}/confirm", firstBooking).header("Authorization", bearer(vetToken)))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("CONFIRMED"));
         mvc.perform(post("/api/appointments/{id}/cancel", firstBooking).header("Authorization", bearer(vetToken)))
             .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("CANCELLED"));
     }

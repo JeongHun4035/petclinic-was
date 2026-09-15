@@ -42,8 +42,8 @@ public class AppointmentService {
                 || (petId != null && petId < 1) || (vetId != null && vetId < 1) || (ownerId != null && ownerId < 1)) {
             throw error(HttpStatus.BAD_REQUEST, "IDs must be positive; limit must be 1-100 and offset must be non-negative");
         }
-        if (status != null && !List.of("SCHEDULED", "CANCELLED").contains(status)) {
-            throw error(HttpStatus.BAD_REQUEST, "Status must be SCHEDULED or CANCELLED");
+        if (status != null && !List.of("PENDING", "CONFIRMED", "CANCELLED").contains(status)) {
+            throw error(HttpStatus.BAD_REQUEST, "Status must be PENDING, CONFIRMED or CANCELLED");
         }
         if (from != null && to != null && !from.isBefore(to)) {
             throw error(HttpStatus.BAD_REQUEST, "from must be earlier than to");
@@ -81,8 +81,8 @@ public class AppointmentService {
         Appointment existing = required(id, true);
         access.requireAppointmentRead(existing);
         access.requireAppointmentWrite(appointment.petId());
-        if (!"SCHEDULED".equals(existing.status()) || !existing.startTime().isAfter(OffsetDateTime.now())) {
-            throw error(HttpStatus.CONFLICT, "Only upcoming scheduled appointments can be changed");
+        if (!"PENDING".equals(existing.status()) || !existing.startTime().isAfter(OffsetDateTime.now())) {
+            throw error(HttpStatus.CONFLICT, "Only upcoming pending appointments can be changed");
         }
         repository.lockPetAndVet(appointment.petId(), appointment.vetId());
         checkAvailability(appointment);
@@ -103,6 +103,22 @@ public class AppointmentService {
         return toDto(required(id, false));
     }
 
+    public AppointmentDto confirm(int id) {
+        Appointment existing = required(id, true);
+        access.requireAppointmentConfirm(existing);
+        if ("CONFIRMED".equals(existing.status())) {
+            return toDto(existing);
+        }
+        if (!"PENDING".equals(existing.status())) {
+            throw error(HttpStatus.CONFLICT, "Only pending appointments can be confirmed");
+        }
+        if (!existing.startTime().isAfter(OffsetDateTime.now())) {
+            throw error(HttpStatus.CONFLICT, "An appointment that has started cannot be confirmed");
+        }
+        repository.confirm(id);
+        return toDto(required(id, false));
+    }
+
     private Appointment prepare(Integer id, AppointmentFieldsDto request) {
         if (request.getPetId() == null || request.getVetId() == null || request.getPetId() < 1 || request.getVetId() < 1
                 || request.getStartTime() == null || request.getEndTime() == null
@@ -114,7 +130,7 @@ public class AppointmentService {
         if (!start.isAfter(OffsetDateTime.now()) || !end.isAfter(start)) {
             throw error(HttpStatus.BAD_REQUEST, "startTime must be in the future and endTime must be later than startTime");
         }
-        return new Appointment(id, request.getPetId(), request.getVetId(), null, start, end, request.getReason(), "SCHEDULED");
+        return new Appointment(id, request.getPetId(), request.getVetId(), null, start, end, request.getReason(), "PENDING");
     }
 
     private void checkAvailability(Appointment appointment) {

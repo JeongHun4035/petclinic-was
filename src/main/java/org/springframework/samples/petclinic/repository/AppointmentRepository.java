@@ -12,5 +12,6 @@ public interface AppointmentRepository {
     boolean overlaps(Integer excludedId, int petId, int vetId, OffsetDateTime start, OffsetDateTime end);
     int insert(Appointment appointment);
     void update(Appointment appointment);
+    void confirm(int id);
     void cancel(int id);
 }

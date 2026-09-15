@@ -159,6 +159,20 @@ public class OwnerRestControllerV1 implements OwnersApi {
         return new ResponseEntity<>(petDto, headers, HttpStatus.CREATED);
     }
 
+    @PreAuthorize("@access.readOwner(#ownerId)")
+    @Override
+    public ResponseEntity<List<PetDto>> listOwnersPets(Integer ownerId) {
+        Owner owner = this.clinicService.findOwnerById(ownerId);
+        if (owner == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        List<PetDto> pets = owner.getPets().stream()
+            .filter(pet -> access.readPet(pet.getId()))
+            .map(petMapper::toPetDto)
+            .toList();
+        return ResponseEntity.ok(pets);
+    }
+
     @PreAuthorize("@access.writeOwner(#ownerId) and @access.writePet(#petId) and @access.ownerPet(#ownerId, #petId)")
     @Override
     public ResponseEntity<Void> updateOwnersPet(Integer ownerId, Integer petId, PetFieldsDto petFieldsDto) {

@@ -68,7 +68,7 @@ public class JdbcAccountRepository {
     }
 
     public boolean vetTreatsPet(int vetId, int petId) {
-        Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM appointments WHERE vet_id = ? AND pet_id = ? AND status = 'SCHEDULED'",
+        Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM appointments WHERE vet_id = ? AND pet_id = ? AND status IN ('PENDING', 'CONFIRMED')",
             Integer.class, vetId, petId);
         return count != null && count > 0;
     }
@@ -76,7 +76,7 @@ public class JdbcAccountRepository {
     public boolean vetTreatsOwner(int vetId, int ownerId) {
         Integer count = jdbc.queryForObject("""
             SELECT COUNT(*) FROM appointments a JOIN pets p ON p.id = a.pet_id
-            WHERE a.vet_id = ? AND p.owner_id = ? AND a.status = 'SCHEDULED'
+            WHERE a.vet_id = ? AND p.owner_id = ? AND a.status IN ('PENDING', 'CONFIRMED')
             """, Integer.class, vetId, ownerId);
         return count != null && count > 0;
     }

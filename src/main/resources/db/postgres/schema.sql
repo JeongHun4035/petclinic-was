@@ -73,11 +73,11 @@ CREATE TABLE IF NOT EXISTS appointments (
   start_time TIMESTAMP(6) NOT NULL,
   end_time TIMESTAMP(6) NOT NULL,
   reason VARCHAR(255) NOT NULL,
-  status VARCHAR(20) DEFAULT 'SCHEDULED' NOT NULL,
+  status VARCHAR(20) DEFAULT 'PENDING' NOT NULL,
   CONSTRAINT fk_appointments_pet FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE,
   CONSTRAINT fk_appointments_vet FOREIGN KEY (vet_id) REFERENCES vets(id) ON DELETE CASCADE,
   CONSTRAINT chk_appointments_times CHECK (end_time > start_time),
-  CONSTRAINT chk_appointments_status CHECK (status = 'SCHEDULED' OR status = 'CANCELLED')
+  CONSTRAINT chk_appointments_status CHECK (status = 'PENDING' OR status = 'CONFIRMED' OR status = 'CANCELLED')
 );
 CREATE INDEX IF NOT EXISTS idx_appointments_pet_time ON appointments(pet_id, status, start_time, end_time);
 CREATE INDEX IF NOT EXISTS idx_appointments_vet_time ON appointments(vet_id, status, start_time, end_time);

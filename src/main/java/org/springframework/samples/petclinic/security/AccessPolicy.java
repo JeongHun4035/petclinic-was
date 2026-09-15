@@ -103,4 +103,12 @@ public class AccessPolicy {
         if (hasRole("ROLE_OWNER") && writePet(petId)) return;
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the pet owner or administrator can book or reschedule");
     }
+
+    public void requireAppointmentConfirm(Appointment appointment) {
+        if (!enabled) return;
+        Account account = currentAccount();
+        if (hasRole("ROLE_VET") && account.vetId() != null
+                && Objects.equals(account.vetId(), appointment.vetId())) return;
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the assigned vet can confirm this appointment");
+    }
 }

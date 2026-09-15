@@ -29,6 +29,7 @@ erDiagram
 | GET | `/appointments/{id}` | 상세 조회 |
 | PUT | `/appointments/{id}` | 예약 정보 전체 변경 |
 | POST | `/appointments/{id}/cancel` | 취소, 반복 호출 가능 |
+| POST | `/appointments/{id}/confirm` | 배정된 수의사가 예약 확정, 반복 호출 가능 |
 
 생성과 변경에는 다음 JSON을 전달합니다. `id`, `ownerId`, `status`는 서버에서 계산합니다.
 
@@ -53,7 +54,7 @@ erDiagram
   "startTime": "2026-09-20T01:00:00Z",
   "endTime": "2026-09-20T01:30:00Z",
   "reason": "예방접종",
-  "status": "SCHEDULED"
+  "status": "PENDING"
 }
 ```
 
@@ -61,11 +62,11 @@ erDiagram
 시간은 마이크로초 단위로 정규화합니다. 시작 시간은 미래여야 하고 종료 시간은 시작보다 늦어야 합니다.
 사유는 공백을 제외한 내용이 있어야 하며 최대 255자입니다.
 
-같은 반려동물 또는 같은 수의사의 `SCHEDULED` 예약은 시간이 겹칠 수 없습니다.
+같은 반려동물 또는 같은 수의사의 `PENDING`, `CONFIRMED` 예약은 시간이 겹칠 수 없습니다.
 한 예약의 종료 시각에 다음 예약이 시작하는 것은 허용합니다.
 충돌 검사는 공통 DB 트랜잭션과 반려동물·수의사 잠금으로 동시 요청에서도 적용합니다.
 
-생성 상태는 `SCHEDULED`이며 취소하면 `CANCELLED`로 변경해 기록을 남깁니다.
+생성 상태는 확인중을 뜻하는 `PENDING`입니다. 배정된 수의사가 `/appointments/{id}/confirm`을 호출하면 확정을 뜻하는 `CONFIRMED`가 되고, 취소하면 `CANCELLED`로 변경해 기록을 남깁니다.
 시작된 예약은 변경하거나 취소할 수 없고, 취소된 예약을 수정해 다시 활성화할 수 없습니다.
 취소된 시간은 새 예약에서 사용할 수 있습니다. 진료 완료 기록은 기존 `/visits` API로 등록합니다.
 반려동물이나 수의사를 삭제하면 연결된 예약도 FK의 `ON DELETE CASCADE`로 삭제됩니다.
@@ -75,12 +76,12 @@ erDiagram
 | 파라미터 | 의미 |
 | --- | --- |
 | petId, vetId, ownerId | 해당 반려동물, 수의사, 현재 보호자로 필터 |
-| status | `SCHEDULED` 또는 `CANCELLED`; 생략하면 모두 조회 |
+| status | `PENDING`, `CONFIRMED`, `CANCELLED`; 생략하면 모두 조회 |
 | from, to | `[from, to)` 구간과 겹치는 예약; 한쪽만 지정 가능 |
 | limit | 기본 20, 최대 100 |
 | offset | 기본 0, 건너뛸 예약 수 |
 
-예: `GET /appointments?ownerId=1&status=SCHEDULED&limit=20&offset=0`
+예: `GET /appointments?ownerId=1&status=PENDING&limit=20&offset=0`
 시간대의 `+`를 쿼리에 넣을 때는 `%2B`로 URL 인코딩합니다.
 결과는 시작 시간과 ID 순서로 정렬한 배열이며 결과가 없으면 `200 []`를 반환합니다.
 

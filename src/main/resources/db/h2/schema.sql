@@ -79,12 +79,12 @@ CREATE TABLE IF NOT EXISTS appointments (
   start_time TIMESTAMP(6) NOT NULL,
   end_time TIMESTAMP(6) NOT NULL,
   reason VARCHAR(255) NOT NULL,
-  status VARCHAR(20) DEFAULT 'SCHEDULED' NOT NULL,
+  status VARCHAR(20) DEFAULT 'PENDING' NOT NULL,
   CONSTRAINT fk_appointments_pet FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE,
   CONSTRAINT fk_appointments_vet FOREIGN KEY (vet_id) REFERENCES vets(id) ON DELETE CASCADE,
   CONSTRAINT chk_appointments_times CHECK (end_time > start_time),
   -- CASE avoids H2 2.4.240's cached IN-check session bug (h2database/h2database#4291).
-  CONSTRAINT chk_appointments_status CHECK (CASE WHEN status = 'SCHEDULED' THEN TRUE ELSE status = 'CANCELLED' END)
+  CONSTRAINT chk_appointments_status CHECK (CASE WHEN status = 'PENDING' THEN TRUE WHEN status = 'CONFIRMED' THEN TRUE ELSE status = 'CANCELLED' END)
 );
 CREATE INDEX IF NOT EXISTS idx_appointments_pet_time ON appointments(pet_id, status, start_time, end_time);
 CREATE INDEX IF NOT EXISTS idx_appointments_vet_time ON appointments(vet_id, status, start_time, end_time);

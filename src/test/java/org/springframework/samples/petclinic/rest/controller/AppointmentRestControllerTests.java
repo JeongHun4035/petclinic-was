@@ -42,13 +42,13 @@ class AppointmentRestControllerTests {
     void createReadFilterAndReschedule(String platform) throws Exception {
         try (Fixture f = new Fixture(platform)) {
             var created = f.service.create(request(1, 1, START, START.plusMinutes(30)));
-            assertEquals("SCHEDULED", created.getStatus());
+            assertEquals("PENDING", created.getStatus());
             assertEquals(1, created.getOwnerId());
             assertEquals(START.toInstant(), created.getStartTime().toInstant());
             assertEquals(ZoneOffset.UTC, created.getStartTime().getOffset());
             f.mvc.perform(get("/api/appointments/{id}", created.getId()))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.petId").value(1))
-                .andExpect(jsonPath("$.ownerId").value(1)).andExpect(jsonPath("$.status").value("SCHEDULED"));
+                .andExpect(jsonPath("$.ownerId").value(1)).andExpect(jsonPath("$.status").value("PENDING"));
             f.mvc.perform(get("/api/appointments").param("ownerId", "1").param("vetId", "1")
                     .param("from", START.plusMinutes(10).toString()).param("to", START.plusMinutes(20).toString()))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1));
@@ -67,7 +67,7 @@ class AppointmentRestControllerTests {
             f.mvc.perform(post("/api/appointments").contentType(MediaType.APPLICATION_JSON)
                     .content(json(1, 1, START, START.plusMinutes(30))))
                 .andExpect(status().isCreated()).andExpect(header().exists("Location"))
-                .andExpect(jsonPath("$.ownerId").value(1)).andExpect(jsonPath("$.status").value("SCHEDULED"));
+                .andExpect(jsonPath("$.ownerId").value(1)).andExpect(jsonPath("$.status").value("PENDING"));
         }
     }
 
@@ -114,6 +114,21 @@ class AppointmentRestControllerTests {
 
     @ParameterizedTest
     @ValueSource(strings = {"h2", "hsqldb"})
+    void confirmationIsIdempotentAndConfirmedTimeRemainsReserved(String platform) throws Exception {
+        try (Fixture f = new Fixture(platform)) {
+            var first = f.service.create(request(1, 1, START, START.plusMinutes(30)));
+            f.mvc.perform(post("/api/appointments/{id}/confirm", first.getId()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("CONFIRMED"));
+            assertEquals("CONFIRMED", f.service.confirm(first.getId()).getStatus());
+            assertConflict(() -> f.service.update(first.getId(), request(1, 1, START.plusHours(1), START.plusHours(2))));
+            assertConflict(() -> f.service.create(request(2, 1, START, START.plusMinutes(30))));
+            f.mvc.perform(get("/api/appointments").param("status", "CONFIRMED"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1));
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"h2", "hsqldb"})
     void invalidRequestsAndMissingResourcesReturnCorrectStatus(String platform) throws Exception {
         try (Fixture f = new Fixture(platform)) {
             for (String body : List.of("{}", "{", json(1, 1, START, START),
@@ -130,6 +145,7 @@ class AppointmentRestControllerTests {
             }
             f.mvc.perform(get("/api/appointments/9999")).andExpect(status().isNotFound());
             f.mvc.perform(post("/api/appointments/9999/cancel")).andExpect(status().isNotFound());
+            f.mvc.perform(post("/api/appointments/9999/confirm")).andExpect(status().isNotFound());
             f.mvc.perform(get("/api/appointments").param("limit", "101")).andExpect(status().isBadRequest());
             f.mvc.perform(get("/api/appointments").param("offset", "-1")).andExpect(status().isBadRequest());
             f.mvc.perform(get("/api/appointments").param("status", "UNKNOWN")).andExpect(status().isBadRequest());
